@@ -1,2 +1,2 @@
-# arc
+# ARC
 Adaptive and Reliable Classification
