@@ -155,16 +155,16 @@ if __name__ == '__main__':
     # List of calibration methods to be compared
     if n_train <= 1000:
         methods = {
-            'SC':  arc.conformal.SplitConformal,
-            'CV+': arc.conformal.CVPlus,
-            'JK+': arc.conformal.JackknifePlus,
+            'SC':  arc.methods.SplitConformal,
+            'CV+': arc.methods.CVPlus,
+            'JK+': arc.methods.JackknifePlus,
             'HCC': arc.others.SplitConformalHomogeneous,
             'CQC': arc.others.CQC
         }
     else:
         methods = {
-            'SC':  arc.conformal.SplitConformal,
-            'CV+': arc.conformal.CVPlus,
+            'SC':  arc.methods.SplitConformal,
+            'CV+': arc.methods.CVPlus,
             'HCC': arc.others.SplitConformalHomogeneous,
             'CQC': arc.others.CQC
         }

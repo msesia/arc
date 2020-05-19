@@ -8,7 +8,7 @@ DATASET_LIST   = ["mice", "fashion", "mnist", "cifar10"]
 N_TRAIN_LIST = [500, 1000, 5000, 10000]
 
 # Data sets directory 
-dataset_base_path = '/Users/romano/mydata/classification_data/'
+dataset_base_path = '~/mydata/classification_data/'
 
 # Where to write results
 out_dir = "./results"
