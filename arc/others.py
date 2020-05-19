@@ -1,12 +1,11 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
+from skgarden import RandomForestQuantileRegressor
 from scipy.stats.mstats import mquantiles
 import sys
 sys.path.insert(0, '../third_party')
 from cqr_comparison import NeuralNetworkQR
 import torch
-
-from tqdm import tqdm
 
 from arc.classification import ProbabilityAccumulator as ProbAccum
 
@@ -41,7 +40,27 @@ class NeuralQuantileRegressor:
     def predict(self, X):
         y = self.model.predict(X)
         return y
+
+class ForestQuantileRegressor:
+    def __init__(self, p, alpha, random_state=2020, verbose=True):
+        # Parameters of the random forest
+        self.alpha = 100*alpha
+                
+        self.model = RandomForestQuantileRegressor(random_state=random_state,
+                                                   min_samples_split=3,
+                                                   n_estimators=100)
         
+    def fit(self, X, y):
+        # Reshape the data
+        X = np.asarray(X)
+        y = np.asarray(y)
+        self.model.fit(X, y)
+        
+    def predict(self, X):
+        lower = self.model.predict(X, quantile=self.alpha)
+        y = np.concatenate((lower[:,np.newaxis], self.model.predict(X, quantile=100.0-self.alpha)[:,np.newaxis]),1)
+        return y
+      
 class SplitConformalHomogeneous:
     def __init__(self, X, Y, black_box, alpha, random_state=2020, verbose=False):
         # Split data into training/calibration sets
@@ -75,8 +94,9 @@ class SplitConformalHomogeneous:
         S_hat = [np.where(p_hat[i,:] >= self.threshold_calibrated)[0] for i in range(n)]
         return S_hat
 
-class CQC:
-    def __init__(self, X, y, black_box, alpha, random_state=2020, verbose=False):
+
+class BaseCQC:
+    def __init__(self, X, y, black_box, alpha, qr_method, random_state=2020, verbose=False):
         # Problem dimensions
         self.p = X.shape[1]
         
@@ -86,10 +106,20 @@ class CQC:
         # Black box for probability estimates
         self.black_box = black_box
         
-        # Quantiles for neural network
-        self.quantile_black_box = NeuralQuantileRegressor(self.p, self.alpha, random_state=random_state, 
-                                                          verbose=verbose)
-        
+        if qr_method == "NNet":
+            # Quantiles for neural network
+            self.quantile_black_box = NeuralQuantileRegressor(self.p,
+                                                              self.alpha,
+                                                              random_state=random_state, 
+                                                              verbose=verbose)
+        elif qr_method == "RF":
+            self.quantile_black_box = ForestQuantileRegressor(self.p,
+                                                              self.alpha,
+                                                              random_state=random_state,
+                                                              verbose=verbose)
+        else:
+            raise
+            
         # Split data into training and calibration sets
         X_train, X_calibration, y_train, y_calibration = train_test_split(X, y, test_size=0.333, 
                                                                           random_state=random_state)
@@ -135,7 +165,21 @@ class CQC:
         q_hat = self.quantile_black_box.predict(X)[:,1]
         S = [np.where(p_hat[i,:] >= q_hat[i] - self.score_correction)[0] for i in range(n)]
         return S
+    
+class CQC:
+    def __init__(self, X, y, black_box, alpha, random_state=2020, verbose=False):
+        self.base_cqc = BaseCQC(X, y, black_box, alpha, "NNet", random_state, verbose)
+        
+    def predict(self, X):
+        return self.base_cqc.predict(X)
 
+class CQCRF:
+    def __init__(self, X, y, black_box, alpha, random_state=2020, verbose=False):
+        self.base_cqc = BaseCQC(X, y, black_box, alpha, "RF", random_state, verbose)
+        
+    def predict(self, X):
+        return self.base_cqc.predict(X)
+    
 class Oracle:
     def __init__(self, data_model, alpha, random_state=2020, verbose=True):
         self.data_model = data_model
