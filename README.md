@@ -1,10 +1,10 @@
 # ARC (Adaptive and Reliable Classification)
 
-This package provides some statistical wrappers for machine learning classification tools in order to construct prediction sets for the label of a new test point with valid marginal coverage.
+This package provides some statistical wrappers for machine learning classification tools in order to construct prediction sets for the label of a new test point with provably valid marginal coverage and approximate conditional coverage.
 
-Accompanying paper (http://arxiv.org/abs/2006.02544):
+Accompanying paper (https://papers.nips.cc/paper/2020/hash/244edd7e85dc81602b7615cd705545f5-Abstract.html):
 
-    "Classification with Valid and Adaptive Coverage", Y. Romano, M. Sesia, E. Candès, 2020.
+    "Classification with Valid and Adaptive Coverage", Y. Romano, M. Sesia, E. Candès, NeurIPS 2020 (spotlight).
     
 
 ## Contents
