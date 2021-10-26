@@ -4,7 +4,9 @@ This package provides some statistical wrappers for machine learning classificat
 
 Accompanying paper (https://papers.nips.cc/paper/2020/hash/244edd7e85dc81602b7615cd705545f5-Abstract.html):
 
-    "Classification with Valid and Adaptive Coverage", Y. Romano, M. Sesia, E. Candès, NeurIPS 2020 (spotlight).
+    "Classification with Valid and Adaptive Coverage"
+    Y. Romano, M. Sesia, E. Candès
+    NeurIPS 2020 (spotlight).
     
 
 ## Contents
