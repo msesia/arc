@@ -20,7 +20,7 @@ class ProbabilityAccumulator:
             p_remove = Z_excess / np.array([ self.prob_sort[i, L[i]] for i in range(self.n) ])
             remove = epsilon <= p_remove
             for i in np.where(remove)[0]:
-                L[i] = L[i] - 1
+                L[i] = np.maximum(0, L[i] - 1) # Note: avoid returning empty sets
         # Return prediction set
         S = [ self.order[i,np.arange(0, L[i]+1)] for i in range(self.n) ]
         return(S)
