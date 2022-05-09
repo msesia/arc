@@ -11,16 +11,18 @@ class ProbabilityAccumulator:
         #self.epsilon = np.random.uniform(low=0.0, high=1.0, size=self.n)
         self.Z = np.round(self.prob_sort.cumsum(axis=1),9)        
         
-    def predict_sets(self, alpha, randomize=False, epsilon=None):
+    def predict_sets(self, alpha, epsilon=None, allow_empty=True):
         L = np.argmax(self.Z >= 1.0-alpha, axis=1).flatten()
-        if randomize:
-            epsilon = np.random.uniform(low=0.0, high=1.0, size=self.n)
         if epsilon is not None:
             Z_excess = np.array([ self.Z[i, L[i]] for i in range(self.n) ]) - (1.0-alpha)
             p_remove = Z_excess / np.array([ self.prob_sort[i, L[i]] for i in range(self.n) ])
             remove = epsilon <= p_remove
             for i in np.where(remove)[0]:
-                L[i] = np.maximum(0, L[i] - 1) # Note: avoid returning empty sets
+                if not allow_empty:
+                    L[i] = np.maximum(0, L[i] - 1)  # Note: avoid returning empty sets
+                else:
+                    L[i] = L[i] - 1
+
         # Return prediction set
         S = [ self.order[i,np.arange(0, L[i]+1)] for i in range(self.n) ]
         return(S)

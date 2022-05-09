@@ -62,12 +62,13 @@ class ForestQuantileRegressor:
         return y
       
 class SplitConformalHomogeneous:
-    def __init__(self, X, Y, black_box, alpha, random_state=2020, verbose=False):
+    def __init__(self, X, Y, black_box, alpha, random_state=2020, allow_empty=True, verbose=False):
         # Split data into training/calibration sets
         X_train, X_calib, Y_train, Y_calib = train_test_split(X, Y, test_size=0.5, random_state=random_state)
         n2 = X_calib.shape[0]
         self.black_box = black_box
         self.alpha = alpha
+        self.allow_empty = allow_empty
 
         # Fit model
         self.black_box.fit(X_train, Y_train)
@@ -76,7 +77,8 @@ class SplitConformalHomogeneous:
         p_hat_calib = self.black_box.predict_proba(X_calib)
 
         # Break ties at random
-        p_hat_calib += 1e-9 * np.random.uniform(low=-1.0, high=1.0, size=p_hat_calib.shape)
+        rng = np.random.default_rng(random_state)
+        p_hat_calib += 1e-9 * rng.uniform(low=-1.0, high=1.0, size=p_hat_calib.shape)
         p_hat_calib = p_hat_calib / p_hat_calib.sum(axis=1)[:,None]        
         p_y_calib = np.array([ p_hat_calib[i, Y_calib[i]] for i in range(len(Y_calib)) ])        
         
@@ -84,19 +86,25 @@ class SplitConformalHomogeneous:
         level_adjusted = (1.0-alpha)*(1.0+1.0/float(n2))
         self.threshold_calibrated = mquantiles(p_y_calib, prob=1.0-level_adjusted)
 
-    def predict(self, X):
+    def predict(self, X, random_state=2020):
         n = X.shape[0]
         p_hat = self.black_box.predict_proba(X)
         # Break ties at random
-        p_hat += 1e-9 * np.random.uniform(low=-1.0, high=1.0, size=p_hat.shape)
+        rng = np.random.default_rng(random_state)
+        p_hat += 1e-9 * rng.uniform(low=-1.0, high=1.0, size=p_hat.shape)
         p_hat = p_hat / p_hat.sum(axis=1)[:,None]        
         # Make prediction sets
-        S_hat = [np.where(p_hat[i,:] >= self.threshold_calibrated)[0] for i in range(n)]
+        S_hat = [None]*n
+        for i in range(n):
+            S_hat[i] = np.where(p_hat[i,:] >= self.threshold_calibrated)[0]
+            if (not self.allow_empty) and (len(S_hat[i])==0):
+                S_hat[i] = [np.argmax(p_hat[i,:])]
         return S_hat
 
 
 class BaseCQC:
-    def __init__(self, X, y, black_box, alpha, qr_method, random_state=2020, verbose=False):
+    def __init__(self, X, y, black_box, alpha, qr_method, random_state=2020, allow_empty=True, verbose=False):
+        self.allow_empty = allow_empty
         # Problem dimensions
         self.p = X.shape[1]
         
@@ -163,30 +171,40 @@ class BaseCQC:
         n = X.shape[0]
         p_hat = self.black_box.predict_proba(X)
         q_hat = self.quantile_black_box.predict(X)[:,1]
-        S = [np.where(p_hat[i,:] >= q_hat[i] - self.score_correction)[0] for i in range(n)]
+        S = [None]*n
+        for i in range(n):
+            S[i] = np.where(p_hat[i,:] >= q_hat[i] - self.score_correction)[0]
+            if (not self.allow_empty) and (len(S[i])==0):
+                S[i] = [np.argmax(p_hat[i,:])]
         return S
     
 class CQC:
-    def __init__(self, X, y, black_box, alpha, random_state=2020, verbose=False):
-        self.base_cqc = BaseCQC(X, y, black_box, alpha, "NNet", random_state, verbose)
+    def __init__(self, X, y, black_box, alpha, random_state=2020, allow_empty=True, verbose=False):
+        self.base_cqc = BaseCQC(X, y, black_box, alpha, "NNet", random_state=random_state, allow_empty=allow_empty, verbose=verbose)
         
     def predict(self, X):
         return self.base_cqc.predict(X)
 
 class CQCRF:
-    def __init__(self, X, y, black_box, alpha, random_state=2020, verbose=False):
-        self.base_cqc = BaseCQC(X, y, black_box, alpha, "RF", random_state, verbose)
+    def __init__(self, X, y, black_box, alpha, random_state=2020, allow_empty=True, verbose=False):
+        self.base_cqc = BaseCQC(X, y, black_box, alpha, "RF", random_state=random_state, allow_empty=allow_empty, verbose=verbose)
         
     def predict(self, X):
         return self.base_cqc.predict(X)
     
 class Oracle:
-    def __init__(self, data_model, alpha, random_state=2020, verbose=True):
+    def __init__(self, data_model, alpha, random_state=2020, allow_empty=True, verbose=True):
         self.data_model = data_model
         self.alpha = alpha
+        self.allow_empty = allow_empty
         
-    def predict(self, X, randomize=True):
+    def predict(self, X, randomize=True, random_state=2020):
+        if randomize:
+            rng = np.random.default_rng(random_state)
+            epsilon = rng.uniform(low=0.0, high=1.0, size=X.shape[0])
+        else:
+            epsilon = None
         prob_y = self.data_model.compute_prob(X)
         grey_box = ProbAccum(prob_y)
-        S = grey_box.predict_sets(self.alpha, randomize=randomize)
+        S = grey_box.predict_sets(self.alpha, epsilon=epsilon, allow_empty=self.allow_empty)
         return S

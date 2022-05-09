@@ -2,7 +2,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-def wsc(X, y, S, delta=0.1, M=1000, verbose=False):
+def wsc(X, y, S, delta=0.1, M=1000, random_state=2020, verbose=False):
+    rng = np.random.default_rng(random_state)
 
     def wsc_v(X, y, S, delta, v):
         n = len(y)
@@ -29,7 +30,7 @@ def wsc(X, y, S, delta=0.1, M=1000, verbose=False):
         return cover_min, z_sorted[ai_best], z_sorted[bi_best]
 
     def sample_sphere(n, p):
-        v = np.random.randn(p, n)
+        v = rng.normal(size=(p, n))
         v /= np.linalg.norm(v, axis=0)
         return v.T
 
@@ -63,7 +64,7 @@ def wsc_unbiased(X, y, S, delta=0.1, M=1000, test_size=0.75, random_state=2020, 
     X_train, X_test, y_train, y_test, S_train, S_test = train_test_split(X, y, S, test_size=test_size,
                                                                          random_state=random_state)
     # Find adversarial parameters
-    wsc_star, v_star, a_star, b_star = wsc(X_train, y_train, S_train, delta=delta, M=M, verbose=verbose)
+    wsc_star, v_star, a_star, b_star = wsc(X_train, y_train, S_train, delta=delta, M=M, random_state=random_state, verbose=verbose)
     # Estimate coverage
     coverage = wsc_vab(X_test, y_test, S_test, v_star, a_star, b_star)
     return coverage
