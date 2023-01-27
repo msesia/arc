@@ -1,65 +1,72 @@
 import numpy as np
-from sklearn.model_selection import train_test_split
-from skgarden import RandomForestQuantileRegressor
+from sklearn.model_selection import train_test_split 
 from scipy.stats.mstats import mquantiles
-import sys
-sys.path.insert(0, '../third_party')
-from cqr_comparison import NeuralNetworkQR
+
+# Note: skgarden has recent compatibility issues
+#from skgarden import RandomForestQuantileRegressor
+
+# Note: skgarden has recent compatibility issues
+#import sys
+#sys.path.insert(0, '../third_party')
+#from cqr_comparison import NeuralNetworkQR
+
 import torch
 
 from arc.classification import ProbabilityAccumulator as ProbAccum
 
-class NeuralQuantileRegressor:
-    def __init__(self, p, alpha, random_state=2020, verbose=True):
-        # Parameters of the neural network
-        params = dict()
-        params['in_shape'] = p
-        params['epochs'] = 1000
-        params['lr'] = 0.0005
-        params['hidden_size'] = 64
-        params['batch_size'] = 64
-        params['dropout'] = 0.1
-        params['wd'] = 1e-6
-        params['test_ratio'] = 0.05
-        params['random_state'] = random_state
+# Note: skgarden has recent compatibility issues
+# class NeuralQuantileRegressor:
+#     def __init__(self, p, alpha, random_state=2020, verbose=True):
+#         # Parameters of the neural network
+#         params = dict()
+#         params['in_shape'] = p
+#         params['epochs'] = 1000
+#         params['lr'] = 0.0005
+#         params['hidden_size'] = 64
+#         params['batch_size'] = 64
+#         params['dropout'] = 0.1
+#         params['wd'] = 1e-6
+#         params['test_ratio'] = 0.05
+#         params['random_state'] = random_state
         
-        # Which quantiles to estimate
-        quantiles_net = [alpha, 1-alpha]
+#         # Which quantiles to estimate
+#         quantiles_net = [alpha, 1-alpha]
         
-        np.random.seed(random_state)
-        torch.manual_seed(random_state)
+#         np.random.seed(random_state)
+#         torch.manual_seed(random_state)
         
-        self.model = NeuralNetworkQR(params, quantiles_net, verbose=verbose)
+#         self.model = NeuralNetworkQR(params, quantiles_net, verbose=verbose)
         
-    def fit(self, X, y):
-        # Reshape the data
-        X = np.asarray(X)
-        y = np.asarray(y)
-        self.model.fit(X, y)
+#     def fit(self, X, y):
+#         # Reshape the data
+#         X = np.asarray(X)
+#         y = np.asarray(y)
+#         self.model.fit(X, y)
         
-    def predict(self, X):
-        y = self.model.predict(X)
-        return y
+#     def predict(self, X):
+#         y = self.model.predict(X)
+#         return y
 
-class ForestQuantileRegressor:
-    def __init__(self, p, alpha, random_state=2020, verbose=True):
-        # Parameters of the random forest
-        self.alpha = 100*alpha
+# Note: skgarden has recent compatibility issues
+# class ForestQuantileRegressor:
+#     def __init__(self, p, alpha, random_state=2020, verbose=True):
+#         # Parameters of the random forest
+#         self.alpha = 100*alpha
                 
-        self.model = RandomForestQuantileRegressor(random_state=random_state,
-                                                   min_samples_split=3,
-                                                   n_estimators=100)
+#         self.model = RandomForestQuantileRegressor(random_state=random_state,
+#                                                    min_samples_split=3,
+#                                                    n_estimators=100)
         
-    def fit(self, X, y):
-        # Reshape the data
-        X = np.asarray(X)
-        y = np.asarray(y)
-        self.model.fit(X, y)
+#     def fit(self, X, y):
+#         # Reshape the data
+#         X = np.asarray(X)
+#         y = np.asarray(y)
+#         self.model.fit(X, y)
         
-    def predict(self, X):
-        lower = self.model.predict(X, quantile=self.alpha)
-        y = np.concatenate((lower[:,np.newaxis], self.model.predict(X, quantile=100.0-self.alpha)[:,np.newaxis]),1)
-        return y
+#     def predict(self, X):
+#         lower = self.model.predict(X, quantile=self.alpha)
+#         y = np.concatenate((lower[:,np.newaxis], self.model.predict(X, quantile=100.0-self.alpha)[:,np.newaxis]),1)
+#         return y
       
 class SplitConformalHomogeneous:
     def __init__(self, X, Y, black_box, alpha, random_state=2020, allow_empty=True, verbose=False):
@@ -120,11 +127,11 @@ class BaseCQC:
                                                               self.alpha,
                                                               random_state=random_state, 
                                                               verbose=verbose)
-        elif qr_method == "RF":
-            self.quantile_black_box = ForestQuantileRegressor(self.p,
-                                                              self.alpha,
-                                                              random_state=random_state,
-                                                              verbose=verbose)
+        # elif qr_method == "RF":
+        #     self.quantile_black_box = ForestQuantileRegressor(self.p,
+        #                                                       self.alpha,
+        #                                                       random_state=random_state,
+        #                                                       verbose=verbose)
         else:
             raise
             
@@ -185,12 +192,12 @@ class CQC:
     def predict(self, X):
         return self.base_cqc.predict(X)
 
-class CQCRF:
-    def __init__(self, X, y, black_box, alpha, random_state=2020, allow_empty=True, verbose=False):
-        self.base_cqc = BaseCQC(X, y, black_box, alpha, "RF", random_state=random_state, allow_empty=allow_empty, verbose=verbose)
+# class CQCRF:
+#     def __init__(self, X, y, black_box, alpha, random_state=2020, allow_empty=True, verbose=False):
+#         self.base_cqc = BaseCQC(X, y, black_box, alpha, "RF", random_state=random_state, allow_empty=allow_empty, verbose=verbose)
         
-    def predict(self, X):
-        return self.base_cqc.predict(X)
+#     def predict(self, X):
+#         return self.base_cqc.predict(X)
     
 class Oracle:
     def __init__(self, data_model, alpha, random_state=2020, allow_empty=True, verbose=True):
